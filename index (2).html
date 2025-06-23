@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Radar Car Controller</title>
+    <style>
+        #radar {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, transparent 50%, rgba(0,100,0,0.2) 100%);
+            position: relative;
+            border: 2px solid #333;
+        }
+        .radar-arm {
+            position: absolute;
+            width: 50%;
+            height: 2px;
+            background: red;
+            top: 50%;
+            transform-origin: 100% 50%;
+        }
+        .radar-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: red;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Radar Car Controller</h1>
+    <div id="radar">
+        <div class="radar-arm" id="arm"></div>
+    </div>
+    <div class="controls">
+        <button class="control-btn" id="forward">↑</button><br>
+        <button class="control-btn" id="left">←</button>
+        <button class="control-btn" id="stop">STOP</button>
+        <button class="control-btn" id="right">→</button><br>
+        <button class="control-btn" id="backward">↓</button>
+    </div>
+    <p>Use WASD or arrow keys to control</p>
+
+    <script>
+        let radar = document.getElementById('radar');
+        let arm = document.getElementById('arm');
+        let device, controlChar;
+        let activeKeys = new Set();
+        let currentAngle = 0;
+        
+        // Radar dimensions
+        const radarRadius = 200;
+        const maxDistance = 400; // cm
+        
+        // Connect to BLE device
+        async function connect() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'RadarCar' }],
+                    optionalServices: [SERVICE_UUID_CONTROL, SERVICE_UUID_DATA]
+                });
+                
+                const server = await device.gatt.connect();
+                const controlService = await server.getPrimaryService(SERVICE_UUID_CONTROL);
+                controlChar = await controlService.getCharacteristic(CHAR_UUID_MOTOR);
+                
+                const dataService = await server.getPrimaryService(SERVICE_UUID_DATA);
+                const distanceChar = await dataService.getCharacteristic(CHAR_UUID_DISTANCE);
+                
+                // Start reading distance data
+                readDistanceData(distanceChar);
+                
+                console.log('Connected!');
+            } catch (error) {
+                console.error('Connection failed:', error);
+            }
+        }
+        
+        // Read distance data and update radar
+        async function readDistanceData(char) {
+            while (true) {
+                const value = await char.readValue();
+                const text = new TextDecoder().decode(value);
+                const [distance, position] = text.split(',').map(Number);
+                
+                updateRadar(distance, position);
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+        }
+        
+        // Update radar display
+        function updateRadar(distance, position) {
+            // Remove old dot
+            const oldDot = document.querySelector('.radar-dot');
+            if (oldDot) oldDot.remove();
+            
+            if (distance > maxDistance) return;
+            
+            // Calculate angle and position
+            const angle = (position / 64) * 360;
+            const normalizedDistance = (distance / maxDistance) * radarRadius;
+            const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
+            const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
+            
+            // Create new dot
+            const dot = document.createElement('div');
+            dot.className = 'radar-dot';
+            dot.style.left = `${x}px`;
+            dot.style.top = `${y}px`;
+            radar.appendChild(dot);
+            
+            // Update arm position
+            currentAngle = angle;
+            arm.style.transform = `rotate(${currentAngle}deg)`;
+        }
+        
+        // Send motor control command
+        function sendMotorCommand(left, right) {
+            if (!controlChar) return;
+            const command = `${left},${right}`;
+            controlChar.writeValue(new TextEncoder().encode(command));
+        }
+        
+        // Keyboard control
+        document.addEventListener('keydown', (e) => {
+            if (activeKeys.has(e.key)) return;
+            activeKeys.add(e.key);
+            
+            let left = 0, right = 0;
+            
+            // Process all active keys
+            activeKeys.forEach(key => {
+                switch (key) {
+                    case 'w': case 'ArrowUp': left += 100; right += 100; break;
+                    case 's': case 'ArrowDown': left -= 100; right -= 100; break;
+                    case 'a': case 'ArrowLeft': left -= 50; right += 50; break;
+                    case 'd': case 'ArrowRight': left += 50; right -= 50; break;
+                }
+            });
+            
+            // Clamp values
+            left = Math.max(-100, Math.min(100, left));
+            right = Math.max(-100, Math.min(100, right));
+            
+            sendMotorCommand(left, right);
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            activeKeys.delete(e.key);
+            
+            // If no keys pressed, stop
+            if (activeKeys.size === 0) {
+                sendMotorCommand(0, 0);
+            } else {
+                // Recalculate with remaining keys
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: '' }));
+            }
+        });
+        
+        // Button control
+        document.getElementById('forward').addEventListener('mousedown', () => sendMotorCommand(100, 100));
+        document.getElementById('backward').addEventListener('mousedown', () => sendMotorCommand(-100, -100));
+        document.getElementById('left').addEventListener('mousedown', () => sendMotorCommand(-100, 100));
+        document.getElementById('right').addEventListener('mousedown', () => sendMotorCommand(100, -100));
+        document.getElementById('stop').addEventListener('mousedown', () => sendMotorCommand(0, 0));
+        
+        // Release all buttons
+        const buttons = document.querySelectorAll('.control-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('mouseup', () => sendMotorCommand(0, 0));
+            btn.addEventListener('mouseleave', () => sendMotorCommand(0, 0));
+        });
+        
+        // Connect on page load
+        window.addEventListener('load', connect);
+    </script>
+</body>
+</html>
