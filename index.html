@@ -51,18 +51,16 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            background-color: #ccfccc; /* Solid green base */
+            background-color: #ccfccc;
             background-image: 
-                /* Wider, darker radar circles */
-            radial-gradient(circle, transparent 51%, rgba(0, 100, 0, 0.7) 52%, transparent 53%),
-            radial-gradient(circle, transparent 30%, rgba(0, 100, 0, 0.5) 31%, transparent 32%),
-            radial-gradient(circle, transparent 10%, rgba(0, 100, 0, 0.3) 11%, transparent 12%);
+                radial-gradient(circle, transparent 51%, rgba(0, 100, 0, 0.7) 52%, transparent 53%),
+                radial-gradient(circle, transparent 30%, rgba(0, 100, 0, 0.5) 31%, transparent 32%),
+                radial-gradient(circle, transparent 10%, rgba(0, 100, 0, 0.3) 11%, transparent 12%);
             position: relative;
             border: 2px solid #2c3e50;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        /* Crosshairs - now properly layered */
         #radar::before {
             content: "";
             position: absolute;
@@ -76,7 +74,6 @@
             z-index: 0;
         }
 
-        /* Black center circle - now using ::after instead */
         #radar::after {
             content: "";
             position: absolute;
@@ -105,7 +102,7 @@
             position: absolute;
             width: 8px;
             height: 8px;
-            background: rgba(431, 76, 60, 0.8);
+            background: rgba(231, 76, 60, 0.8);
             border-radius: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 0 5px rgba(231, 76, 60, 0.8);
@@ -259,7 +256,7 @@
             position: absolute;
             font-weight: bold;
             font-size: 12px;
-            color: #7f8c8;
+            color: #7f8c8d;
             top: 50%;
             transform: translateY(-50%);
 			background-color: #ccfccc;
@@ -341,7 +338,6 @@
         let activeKeys = new Set();
         let currentAngle = 0;
         let isConnected = false;
-        let keepReading = false;
         
         // Radar dimensions
         const radarRadius = 200;
@@ -361,11 +357,18 @@
                 device.addEventListener('gattserverdisconnected', onDisconnected);
                 
                 const server = await device.gatt.connect();
+                
+                // Get control service and characteristic
                 const controlService = await server.getPrimaryService(SERVICE_UUID_CONTROL);
                 controlChar = await controlService.getCharacteristic(CHAR_UUID_MOTOR);
                 
+                // Get data service and characteristic
                 const dataService = await server.getPrimaryService(SERVICE_UUID_DATA);
                 distanceChar = await dataService.getCharacteristic(CHAR_UUID_DISTANCE);
+                
+                // Enable notifications for distance data
+                await distanceChar.startNotifications();
+                distanceChar.addEventListener('characteristicvaluechanged', handleDistanceData);
                 
                 // Update UI
                 connectBtn.disabled = true;
@@ -373,10 +376,6 @@
                 statusDisplay.textContent = "Connected";
                 statusDisplay.className = "connection-status connected";
                 isConnected = true;
-                
-                // Start reading distance data
-                keepReading = true;
-                readDistanceData();
                 
                 console.log('Connected!');
             } catch (error) {
@@ -387,11 +386,17 @@
             }
         }
         
+        // Handle distance data updates
+        function handleDistanceData(event) {
+            const value = event.target.value;
+            const text = new TextDecoder().decode(value);
+            const [distance, position] = text.split(',').map(Number);
+            updateRadar(distance, position);
+        }
+        
         // Disconnect from BLE device
         function disconnect() {
             if (!device) return;
-            
-            keepReading = false;
             
             if (device.gatt.connected) {
                 device.gatt.disconnect();
@@ -409,8 +414,6 @@
         
         // Handle disconnection
         function onDisconnected() {
-            keepReading = false;
-            
             // Update UI
             connectBtn.disabled = false;
             disconnectBtn.disabled = true;
@@ -419,23 +422,6 @@
             isConnected = false;
             
             console.log('Device disconnected');
-        }
-        
-        // Read distance data and update radar
-        async function readDistanceData() {
-            while (keepReading && device && device.gatt.connected) {
-                try {
-                    const value = await distanceChar.readValue();
-                    const text = new TextDecoder().decode(value);
-                    const [distance, position] = text.split(',').map(Number);
-                    
-                    updateRadar(distance, position);
-                    await new Promise(resolve => setTimeout(resolve, 20));
-                } catch (error) {
-                    console.error('Error reading data:', error);
-                    break;
-                }
-            }
         }
         
         // Update radar display
