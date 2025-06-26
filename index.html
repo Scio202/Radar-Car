@@ -364,7 +364,7 @@
                 
                 console.log('Requesting Bluetooth Device...');
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'ESP32' }],
+                    filters: [{ name: 'RadarCar' }],
                     optionalServices: [SERVICE_UUID]
                 });
                 
