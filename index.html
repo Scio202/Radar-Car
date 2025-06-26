@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -318,7 +319,30 @@
         <p>Click "Connect" to establish BLE connection with your Radar Car</p>
     </div>
 
+    <div id="console" style="
+        font-family: 'Ubuntu', sans-serif;
+        margin: 20px auto;
+        padding: 10px;
+        background-color: #2c3e50;
+        color: white;
+        height: 100px;
+        overflow-y: auto;
+        border-radius: 5px;
+        width: 80%;
+        max-width: 600px;
+    ">
+        <div id="console-content" style="font-size: 12px;"></div>
+    </div>
+
     <script>
+        // Add this function to log messages to the console
+        function logToConsole(message) {
+            const consoleContent = document.getElementById('console-content');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            consoleContent.appendChild(messageElement);
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+        }
         // BLE UUIDs - Updated to match ESP32 Web BLE App
         const SERVICE_UUID = "36c5ada5-8eb3-4256-b474-e9f5ae28e93a";
         const CHAR_UUID_MOTOR = "bfdf57a4-de50-4ca3-af11-4effa090cc11";
@@ -351,11 +375,11 @@
         // Check if Web Bluetooth is available - Updated to match ESP32 Web BLE App
         function isWebBluetoothEnabled() {
             if (!navigator.bluetooth) {
-                console.log("Web Bluetooth API is not available in this browser!");
+                logToConsole("Web Bluetooth API is not available in this browser!");
                 statusDisplay.textContent = "Web Bluetooth API is not available in this browser!";
                 return false;
             }
-            console.log('Web Bluetooth API supported in this browser.');
+            logToConsole('Web Bluetooth API supported in this browser.');
             return true;
         }
         
@@ -367,18 +391,18 @@
                 statusDisplay.textContent = "Connecting...";
                 statusDisplay.className = "connection-status";
                 
-                console.log('Requesting Bluetooth Device...');
+                logToConsole('Requesting Bluetooth Device...');
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'RadarCar' }],
                     optionalServices: [SERVICE_UUID]
                 });
                 
-                console.log('Connecting to GATT Server...');
+                logToConsole('Connecting to GATT Server...');
                 device.addEventListener('gattserverdisconnected', onDisconnected);
                 bleServer = await device.gatt.connect();
                 
                 // Get service and characteristics
-                console.log('Getting Service...');
+                logToConsole('Getting Service...');
                 bleService = await bleServer.getPrimaryService(SERVICE_UUID);
                 
                 // Get motor control characteristic
@@ -396,7 +420,7 @@
                 statusDisplay.className = "connection-status connected";
                 isConnected = true;
                 
-                console.log('Connected!');
+                logToConsole('Connected!');
             } catch (error) {
                 console.error('Connection failed:', error);
                 statusDisplay.textContent = "Connection failed";
@@ -421,12 +445,12 @@
         function disconnect() {
             if (!bleServer) return;
             
-            console.log('Disconnecting...');
+            logToConsole('Disconnecting...');
             if (bleServer.connected) {
                 if (distanceCharacteristic) {
                     distanceCharacteristic.stopNotifications()
                         .then(() => {
-                            console.log('Notifications stopped');
+                            logToConsole('Notifications stopped');
                             return bleServer.disconnect();
                         })
                         .then(() => {
@@ -443,7 +467,7 @@
         
         // Handle disconnection - Updated to match ESP32 Web BLE App
         function onDisconnected() {
-            console.log('Device disconnected');
+            logToConsole('Device disconnected');
             
             // Update UI
             connectBtn.disabled = false;
@@ -527,7 +551,7 @@
                 isSendingCommand = true;
                 const command = new Uint8Array([leftByte, rightByte]);
                 await motorCharacteristic.writeValue(command);
-                console.log(`Command sent: Left=${left}, Right=${right}`);
+                logToConsole(`Command sent: Left=${left}, Right=${right}`);
             } catch (error) {
                 console.error('Error sending command:', error);
                 if (error.message.includes("disconnected")) {
