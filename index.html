@@ -96,7 +96,7 @@
             background: rgba(231, 76, 60, 0.8);
             top: 50%;
             transform-origin: 100% 50%;
-            transition: transform 0.1s linear;
+            /* REMOVED the transition property to make movement instant */
         }
         
         .radar-dot {
@@ -473,13 +473,14 @@
             });
         }
         
-        // Update radar display with persistent dots and arm position
+        // Update radar display with persistent dots and arm position - MODIFIED VERSION
         function updateRadar(distance, position) {
             // Calculate angle from position (assuming position is 0-63 for 0-360 degrees)
             const angle = (position / 64) * 360;
             
-            // Update arm position to match current angle
+            // Update arm position INSTANTLY to match current angle
             arm.style.transform = `rotate(${angle}deg)`;
+            arm.style.transition = 'none'; // Ensure no transition
             
             // If we have a valid distance reading, plot it
             if (distance > 0 && distance <= maxDistance) {
@@ -509,6 +510,7 @@
                 delete radarDots[position];
             }
         }
+
         
         // Send motor control command - Updated to match ESP32 Web BLE App format
         async function sendMotorCommand(left, right) {
