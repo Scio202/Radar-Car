@@ -343,6 +343,9 @@
         const radarRadius = 200;
         const maxDistance = 400; // cm
         
+        // Object to store radar dots by position
+        const radarDots = {};
+        
         // Check if Web Bluetooth is available - Updated to match ESP32 Web BLE App
         function isWebBluetoothEnabled() {
             if (!navigator.bluetooth) {
@@ -452,15 +455,32 @@
             bleService = null;
             motorCharacteristic = null;
             distanceCharacteristic = null;
+            
+            // Clear all radar dots
+            clearAllRadarDots();
         }
         
-        // Update radar display (unchanged)
+        // Clear all radar dots
+        function clearAllRadarDots() {
+            Object.keys(radarDots).forEach(position => {
+                const dot = radarDots[position];
+                if (dot && dot.parentNode) {
+                    dot.parentNode.removeChild(dot);
+                }
+                delete radarDots[position];
+            });
+        }
+        
+        // Update radar display with persistent dots
         function updateRadar(distance, position) {
-            // Remove old dot
-            const oldDot = document.querySelector('.radar-dot');
-            if (oldDot) oldDot.remove();
-            
-            if (distance > maxDistance) return;
+            if (distance > maxDistance) {
+                // If distance is beyond max, remove any existing dot for this position
+                if (radarDots[position]) {
+                    radar.removeChild(radarDots[position]);
+                    delete radarDots[position];
+                }
+                return;
+            }
             
             // Calculate angle and position
             const angle = (position / 64) * 360;
@@ -468,12 +488,21 @@
             const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
             const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
             
-            // Create new dot
-            const dot = document.createElement('div');
-            dot.className = 'radar-dot';
-            dot.style.left = `${x}px`;
-            dot.style.top = `${y}px`;
-            radar.appendChild(dot);
+            // Check if we already have a dot for this position
+            if (radarDots[position]) {
+                // Update existing dot
+                const dot = radarDots[position];
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+            } else {
+                // Create new dot
+                const dot = document.createElement('div');
+                dot.className = 'radar-dot';
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+                radar.appendChild(dot);
+                radarDots[position] = dot;
+            }
             
             // Update arm position
             currentAngle = angle;
@@ -491,7 +520,6 @@
                 });
         }
         
-        // Rest of the code remains unchanged
         // Get button for keyboard key
         function getButtonForKey(key) {
             switch(key) {
