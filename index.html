@@ -622,15 +622,15 @@
                         right -= 100; 
                         break;
                     case 'a': case 'ArrowLeft': 
-                        left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                 activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        break;
-                    case 'd': case 'ArrowRight': 
                         left += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
                                 activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
                         right -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                                 activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
+                        break;
+                    case 'd': case 'ArrowRight': 
+                        left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
+                        right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
                                  activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
                         break;
                 }
