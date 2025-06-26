@@ -473,42 +473,41 @@
             });
         }
         
-        // Update radar display with persistent dots
+        // Update radar display with persistent dots and arm position
         function updateRadar(distance, position) {
-            if (distance > maxDistance) {
-                // If distance is beyond max, remove any existing dot for this position
-                if (radarDots[position]) {
-                    radar.removeChild(radarDots[position]);
-                    delete radarDots[position];
-                }
-                return;
-            }
-            
-            // Calculate angle and position
+            // Calculate angle from position (assuming position is 0-63 for 0-360 degrees)
             const angle = (position / 64) * 360;
-            const normalizedDistance = (distance / maxDistance) * radarRadius;
-            const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
-            const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
             
-            // Check if we already have a dot for this position
-            if (radarDots[position]) {
-                // Update existing dot
-                const dot = radarDots[position];
-                dot.style.left = `${x}px`;
-                dot.style.top = `${y}px`;
-            } else {
-                // Create new dot
-                const dot = document.createElement('div');
-                dot.className = 'radar-dot';
-                dot.style.left = `${x}px`;
-                dot.style.top = `${y}px`;
-                radar.appendChild(dot);
-                radarDots[position] = dot;
+            // Update arm position to match current angle
+            arm.style.transform = `rotate(${angle}deg)`;
+            
+            // If we have a valid distance reading, plot it
+            if (distance > 0 && distance <= maxDistance) {
+                // Calculate dot position
+                const normalizedDistance = (distance / maxDistance) * radarRadius;
+                const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
+                const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
+                
+                // Check if we already have a dot for this position
+                if (radarDots[position]) {
+                    // Update existing dot
+                    const dot = radarDots[position];
+                    dot.style.left = `${x}px`;
+                    dot.style.top = `${y}px`;
+                } else {
+                    // Create new dot
+                    const dot = document.createElement('div');
+                    dot.className = 'radar-dot';
+                    dot.style.left = `${x}px`;
+                    dot.style.top = `${y}px`;
+                    radar.appendChild(dot);
+                    radarDots[position] = dot;
+                }
+            } else if (radarDots[position]) {
+                // If distance is invalid and we have a dot for this position, remove it
+                radar.removeChild(radarDots[position]);
+                delete radarDots[position];
             }
-            
-            // Update arm position
-            currentAngle = angle;
-            arm.style.transform = `rotate(${currentAngle}deg)`;
         }
         
         // Send motor control command - Updated to match ESP32 Web BLE App format
