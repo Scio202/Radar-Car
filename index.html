@@ -473,10 +473,14 @@
             });
         }
         
+        // Position offset to compensate for lag (adjust this value as needed)
+        const POSITION_OFFSET = 4; // Try values between 3-6 based on your observation
+        
         // Update radar display with persistent dots and arm position - MODIFIED VERSION
         function updateRadar(distance, position) {
-            // Calculate angle from position (assuming position is 0-63 for 0-360 degrees)
-            const angle = (position / 64) * 360;
+            // Calculate angle from position with offset compensation
+            const adjustedPosition = (position + POSITION_OFFSET) % 64; // Wrap around if needed
+            const angle = (adjustedPosition / 64) * 360;
             
             // Update arm position INSTANTLY to match current angle
             arm.style.transform = `rotate(${angle}deg)`;
@@ -484,7 +488,7 @@
             
             // If we have a valid distance reading, plot it
             if (distance > 0 && distance <= maxDistance) {
-                // Calculate dot position
+                // Calculate dot position (using original position for accurate placement)
                 const normalizedDistance = (distance / maxDistance) * radarRadius;
                 const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
                 const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
@@ -510,6 +514,7 @@
                 delete radarDots[position];
             }
         }
+
 
         
         // Send motor control command - Updated to match ESP32 Web BLE App format
