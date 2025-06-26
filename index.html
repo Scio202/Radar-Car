@@ -318,11 +318,10 @@
     </div>
 
     <script>
-        // BLE UUIDs
-        const SERVICE_UUID_CONTROL = "1000";
-        const CHAR_UUID_MOTOR = "1001";
-        const SERVICE_UUID_DATA = "2000";
-        const CHAR_UUID_DISTANCE = "2001";
+        // BLE UUIDs - Updated to match ESP32 Web BLE App
+        const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
+        const CHAR_UUID_MOTOR = "19b10002-e8f2-537e-4f6c-d104768a1214";
+        const CHAR_UUID_DISTANCE = "19b10001-e8f2-537e-4f6c-d104768a1214";
         
         // DOM elements
         const radar = document.getElementById('radar');
@@ -331,10 +330,11 @@
         const disconnectBtn = document.getElementById('disconnect-btn');
         const statusDisplay = document.getElementById('connection-status');
         
-        // BLE variables
-        let device = null;
-        let controlChar = null;
-        let distanceChar = null;
+        // BLE variables - Updated to match ESP32 Web BLE App
+        let bleServer = null;
+        let bleService = null;
+        let motorCharacteristic = null;
+        let distanceCharacteristic = null;
         let activeKeys = new Set();
         let currentAngle = 0;
         let isConnected = false;
@@ -343,32 +343,46 @@
         const radarRadius = 200;
         const maxDistance = 400; // cm
         
-        // Connect to BLE device
+        // Check if Web Bluetooth is available - Updated to match ESP32 Web BLE App
+        function isWebBluetoothEnabled() {
+            if (!navigator.bluetooth) {
+                console.log("Web Bluetooth API is not available in this browser!");
+                statusDisplay.textContent = "Web Bluetooth API is not available in this browser!";
+                return false;
+            }
+            console.log('Web Bluetooth API supported in this browser.');
+            return true;
+        }
+        
+        // Connect to BLE device - Updated to match ESP32 Web BLE App
         async function connect() {
+            if (!isWebBluetoothEnabled()) return;
+            
             try {
                 statusDisplay.textContent = "Connecting...";
                 statusDisplay.className = "connection-status";
                 
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'RadarCar' }],
-                    optionalServices: [SERVICE_UUID_CONTROL, SERVICE_UUID_DATA]
+                console.log('Requesting Bluetooth Device...');
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32' }],
+                    optionalServices: [SERVICE_UUID]
                 });
                 
+                console.log('Connecting to GATT Server...');
                 device.addEventListener('gattserverdisconnected', onDisconnected);
+                bleServer = await device.gatt.connect();
                 
-                const server = await device.gatt.connect();
+                // Get service and characteristics
+                console.log('Getting Service...');
+                bleService = await bleServer.getPrimaryService(SERVICE_UUID);
                 
-                // Get control service and characteristic
-                const controlService = await server.getPrimaryService(SERVICE_UUID_CONTROL);
-                controlChar = await controlService.getCharacteristic(CHAR_UUID_MOTOR);
+                // Get motor control characteristic
+                motorCharacteristic = await bleService.getCharacteristic(CHAR_UUID_MOTOR);
                 
-                // Get data service and characteristic
-                const dataService = await server.getPrimaryService(SERVICE_UUID_DATA);
-                distanceChar = await dataService.getCharacteristic(CHAR_UUID_DISTANCE);
-                
-                // Enable notifications for distance data
-                await distanceChar.startNotifications();
-                distanceChar.addEventListener('characteristicvaluechanged', handleDistanceData);
+                // Get distance characteristic and enable notifications
+                distanceCharacteristic = await bleService.getCharacteristic(CHAR_UUID_DISTANCE);
+                await distanceCharacteristic.startNotifications();
+                distanceCharacteristic.addEventListener('characteristicvaluechanged', handleDistanceData);
                 
                 // Update UI
                 connectBtn.disabled = true;
@@ -383,10 +397,14 @@
                 statusDisplay.textContent = "Connection failed";
                 statusDisplay.className = "connection-status disconnected";
                 isConnected = false;
+                
+                if (error.message.includes("User cancelled")) {
+                    statusDisplay.textContent = "Connection cancelled";
+                }
             }
         }
         
-        // Handle distance data updates
+        // Handle distance data updates - Updated to match ESP32 Web BLE App format
         function handleDistanceData(event) {
             const value = event.target.value;
             const text = new TextDecoder().decode(value);
@@ -394,26 +412,34 @@
             updateRadar(distance, position);
         }
         
-        // Disconnect from BLE device
+        // Disconnect from BLE device - Updated to match ESP32 Web BLE App
         function disconnect() {
-            if (!device) return;
+            if (!bleServer) return;
             
-            if (device.gatt.connected) {
-                device.gatt.disconnect();
+            console.log('Disconnecting...');
+            if (bleServer.connected) {
+                if (distanceCharacteristic) {
+                    distanceCharacteristic.stopNotifications()
+                        .then(() => {
+                            console.log('Notifications stopped');
+                            return bleServer.disconnect();
+                        })
+                        .then(() => {
+                            onDisconnected();
+                        });
+                } else {
+                    bleServer.disconnect();
+                    onDisconnected();
+                }
+            } else {
+                onDisconnected();
             }
-            
-            // Update UI
-            connectBtn.disabled = false;
-            disconnectBtn.disabled = true;
-            statusDisplay.textContent = "Disconnected";
-            statusDisplay.className = "connection-status disconnected";
-            isConnected = false;
-            
-            console.log('Disconnected');
         }
         
-        // Handle disconnection
+        // Handle disconnection - Updated to match ESP32 Web BLE App
         function onDisconnected() {
+            console.log('Device disconnected');
+            
             // Update UI
             connectBtn.disabled = false;
             disconnectBtn.disabled = true;
@@ -421,10 +447,14 @@
             statusDisplay.className = "connection-status disconnected";
             isConnected = false;
             
-            console.log('Device disconnected');
+            // Clear BLE variables
+            bleServer = null;
+            bleService = null;
+            motorCharacteristic = null;
+            distanceCharacteristic = null;
         }
         
-        // Update radar display
+        // Update radar display (unchanged)
         function updateRadar(distance, position) {
             // Remove old dot
             const oldDot = document.querySelector('.radar-dot');
@@ -450,17 +480,18 @@
             arm.style.transform = `rotate(${currentAngle}deg)`;
         }
         
-        // Send motor control command
+        // Send motor control command - Updated to match ESP32 Web BLE App format
         function sendMotorCommand(left, right) {
-            if (!controlChar || !isConnected) return;
-            const command = `${left},${right}`;
-            controlChar.writeValue(new TextEncoder().encode(command))
+            if (!motorCharacteristic || !isConnected) return;
+            const command = new Uint8Array([left, right]);
+            motorCharacteristic.writeValue(command)
                 .catch(error => {
                     console.error('Error sending command:', error);
                     disconnect();
                 });
         }
         
+        // Rest of the code remains unchanged
         // Get button for keyboard key
         function getButtonForKey(key) {
             switch(key) {
@@ -572,7 +603,7 @@
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
         
-        // Check for Web Bluetooth support
+        // Initial Web Bluetooth check
         if (!navigator.bluetooth) {
             alert("Web Bluetooth is not supported in your browser. Please use Chrome or Edge.");
             connectBtn.disabled = true;
