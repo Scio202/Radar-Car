@@ -338,6 +338,7 @@
         let activeKeys = new Set();
         let currentAngle = 0;
         let isConnected = false;
+        let isSendingCommand = false;
         
         // Radar dimensions
         const radarRadius = 200;
@@ -510,14 +511,30 @@
         }
         
         // Send motor control command - Updated to match ESP32 Web BLE App format
-        function sendMotorCommand(left, right) {
-            if (!motorCharacteristic || !isConnected) return;
-            const command = new Uint8Array([left, right]);
-            motorCharacteristic.writeValue(command)
-                .catch(error => {
-                    console.error('Error sending command:', error);
-                    disconnect();
-                });
+        async function sendMotorCommand(left, right) {
+            if (!motorCharacteristic || !isConnected || isSendingCommand) return;
+            
+            // Clamp values to valid range
+            left = Math.max(-100, Math.min(100, left));
+            right = Math.max(-100, Math.min(100, right));
+            
+            // Convert to unsigned bytes (0-255)
+            const leftByte = left < 0 ? 256 + left : left;
+            const rightByte = right < 0 ? 256 + right : right;
+            
+            try {
+                isSendingCommand = true;
+                const command = new Uint8Array([leftByte, rightByte]);
+                await motorCharacteristic.writeValue(command);
+                console.log(`Command sent: Left=${left}, Right=${right}`);
+            } catch (error) {
+                console.error('Error sending command:', error);
+                if (error.message.includes("disconnected")) {
+                    onDisconnected();
+                }
+            } finally {
+                isSendingCommand = false;
+            }
         }
         
         // Get button for keyboard key
@@ -594,34 +611,37 @@
                 }
             });
             
-            // Clamp values
-            left = Math.max(-100, Math.min(100, left));
-            right = Math.max(-100, Math.min(100, right));
-            
+            // Send the command
             sendMotorCommand(left, right);
         }
         
-        // Button control
-        document.getElementById('forward').addEventListener('mousedown', () => sendMotorCommand(100, 100));
-        document.getElementById('backward').addEventListener('mousedown', () => sendMotorCommand(-100, -100));
-        document.getElementById('left').addEventListener('mousedown', () => sendMotorCommand(-100, 100));
-        document.getElementById('right').addEventListener('mousedown', () => sendMotorCommand(100, -100));
-        document.getElementById('stop').addEventListener('mousedown', () => sendMotorCommand(0, 0));
-        
-        // Release all buttons
-        const buttons = document.querySelectorAll('.control-btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('mouseup', () => {
+        // Button control with better error handling
+        function setupButtonControl() {
+            const forwardBtn = document.getElementById('forward');
+            const backwardBtn = document.getElementById('backward');
+            const leftBtn = document.getElementById('left');
+            const rightBtn = document.getElementById('right');
+            const stopBtn = document.getElementById('stop');
+            
+            // Button press handlers
+            forwardBtn.addEventListener('mousedown', () => sendMotorCommand(100, 100));
+            backwardBtn.addEventListener('mousedown', () => sendMotorCommand(-100, -100));
+            leftBtn.addEventListener('mousedown', () => sendMotorCommand(-100, 100));
+            rightBtn.addEventListener('mousedown', () => sendMotorCommand(100, -100));
+            stopBtn.addEventListener('mousedown', () => sendMotorCommand(0, 0));
+            
+            // Button release handlers
+            const handleButtonRelease = () => {
                 if (activeKeys.size === 0) {
                     sendMotorCommand(0, 0);
                 }
+            };
+            
+            [forwardBtn, backwardBtn, leftBtn, rightBtn, stopBtn].forEach(btn => {
+                btn.addEventListener('mouseup', handleButtonRelease);
+                btn.addEventListener('mouseleave', handleButtonRelease);
             });
-            btn.addEventListener('mouseleave', () => {
-                if (activeKeys.size === 0) {
-                    sendMotorCommand(0, 0);
-                }
-            });
-        });
+        }
         
         // Connection buttons
         connectBtn.addEventListener('click', connect);
@@ -636,6 +656,9 @@
             alert("Web Bluetooth is not supported in your browser. Please use Chrome or Edge.");
             connectBtn.disabled = true;
         }
+        
+        // Initialize button controls
+        setupButtonControl();
     </script>
 </body>
 </html>
