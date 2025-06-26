@@ -567,8 +567,8 @@
             switch(key) {
                 case 'w': case 'ArrowUp': return document.getElementById('forward');
                 case 's': case 'ArrowDown': return document.getElementById('backward');
-                case 'a': case 'ArrowLeft': return document.getElementById('left');
-                case 'd': case 'ArrowRight': return document.getElementById('right');
+                case 'a': case 'ArrowLeft': return document.getElementById('right');
+                case 'd': case 'ArrowRight': return document.getElementById('left');
                 default: return null;
             }
         }
@@ -644,8 +644,8 @@
         function setupButtonControl() {
             const forwardBtn = document.getElementById('forward');
             const backwardBtn = document.getElementById('backward');
-            const leftBtn = document.getElementById('left');
-            const rightBtn = document.getElementById('right');
+            const leftBtn = document.getElementById('right');
+            const rightBtn = document.getElementById('left');
             const stopBtn = document.getElementById('stop');
             
             // Button press handlers
