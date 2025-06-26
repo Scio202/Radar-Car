@@ -96,7 +96,7 @@
             background: rgba(231, 76, 60, 0.8);
             top: 50%;
             transform-origin: 100% 50%;
-            /* REMOVED the transition property to make movement instant */
+            transition: transform 0.1s linear;
         }
         
         .radar-dot {
@@ -473,49 +473,43 @@
             });
         }
         
-        // Position offset to compensate for lag (adjust this value as needed)
-        const POSITION_OFFSET = 10; // Try values between 3-6 based on your observation
-        
-        // Update radar display with persistent dots and arm position - MODIFIED VERSION
+        // Update radar display with persistent dots
         function updateRadar(distance, position) {
-            // Calculate angle from position with offset compensation
-            const adjustedPosition = (position + POSITION_OFFSET) % 64; // Wrap around if needed
-            const angle = (adjustedPosition / 64) * 360;
-            
-            // Update arm position INSTANTLY to match current angle
-            arm.style.transform = `rotate(${angle}deg)`;
-            arm.style.transition = 'none'; // Ensure no transition
-            
-            // If we have a valid distance reading, plot it
-            if (distance > 0 && distance <= maxDistance) {
-                // Calculate dot position (using original position for accurate placement)
-                const normalizedDistance = (distance / maxDistance) * radarRadius;
-                const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
-                const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
-                
-                // Check if we already have a dot for this position
+            if (distance > maxDistance) {
+                // If distance is beyond max, remove any existing dot for this position
                 if (radarDots[position]) {
-                    // Update existing dot
-                    const dot = radarDots[position];
-                    dot.style.left = `${x}px`;
-                    dot.style.top = `${y}px`;
-                } else {
-                    // Create new dot
-                    const dot = document.createElement('div');
-                    dot.className = 'radar-dot';
-                    dot.style.left = `${x}px`;
-                    dot.style.top = `${y}px`;
-                    radar.appendChild(dot);
-                    radarDots[position] = dot;
+                    radar.removeChild(radarDots[position]);
+                    delete radarDots[position];
                 }
-            } else if (radarDots[position]) {
-                // If distance is invalid and we have a dot for this position, remove it
-                radar.removeChild(radarDots[position]);
-                delete radarDots[position];
+                return;
             }
+            
+            // Calculate angle and position
+            const angle = (position / 64) * 360;
+            const normalizedDistance = (distance / maxDistance) * radarRadius;
+            const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
+            const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
+            
+            // Check if we already have a dot for this position
+            if (radarDots[position]) {
+                // Update existing dot
+                const dot = radarDots[position];
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+            } else {
+                // Create new dot
+                const dot = document.createElement('div');
+                dot.className = 'radar-dot';
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+                radar.appendChild(dot);
+                radarDots[position] = dot;
+            }
+            
+            // Update arm position
+            currentAngle = angle;
+            arm.style.transform = `rotate(${currentAngle}deg)`;
         }
-
-
         
         // Send motor control command - Updated to match ESP32 Web BLE App format
         async function sendMotorCommand(left, right) {
