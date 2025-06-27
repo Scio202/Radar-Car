@@ -217,6 +217,48 @@
         .control-btn#stop:hover {
             background-color: #d35400;
         }
+
+<div class="speed-controls">
+    <div class="speed-row">
+        <label for="left-speed">Left Motor Speed:</label>
+        <input type="range" id="left-speed" min="0" max="100" value="100" class="speed-slider">
+        <span id="left-speed-value">100%</span>
+    </div>
+    <div class="speed-row">
+        <label for="right-speed">Right Motor Speed:</label>
+        <input type="range" id="right-speed" min="0" max="100" value="100" class="speed-slider">
+        <span id="right-speed-value">100%</span>
+    </div>
+</div>
+
+	.speed-controls {
+	    margin-top: 20px;
+	    text-align: center;
+	    font-family: 'Ubuntu', sans-serif;
+	}
+	
+	.speed-row {
+	    margin: 10px 0;
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	}
+	
+	.speed-row label {
+	    width: 150px;
+	    text-align: right;
+	    margin-right: 10px;
+	}
+	
+	.speed-slider {
+	    width: 200px;
+	    margin-right: 10px;
+	}
+	
+	#left-speed-value, #right-speed-value {
+	    width: 40px;
+	    text-align: left;
+	}
         
         .instructions {
             font-family: 'Ubuntu', sans-serif;
@@ -312,6 +354,18 @@
                 <button class="control-btn" id="backward">↓</button>
             </div>
         </div>
+	    <div class="speed-controls">
+    <div class="speed-row">
+        <label for="left-speed">Left Motor Speed:</label>
+        <input type="range" id="left-speed" min="0" max="100" value="100" class="speed-slider">
+        <span id="left-speed-value">100%</span>
+    </div>
+    <div class="speed-row">
+        <label for="right-speed">Right Motor Speed:</label>
+        <input type="range" id="right-speed" min="0" max="100" value="100" class="speed-slider">
+        <span id="right-speed-value">100%</span>
+    </div>
+</div>
     </div>
     
     <div class="instructions">
@@ -364,6 +418,8 @@
         let currentAngle = 0;
         let isConnected = false;
         let isSendingCommand = false;
+	let leftMotorSpeed = 100;
+	let rightMotorSpeed = 100;
         
         // Radar dimensions
         const radarRadius = 200;
@@ -607,38 +663,42 @@
         }
         
         // Update motor control based on active keys
-        function updateMotorControl() {
-            let left = 0, right = 0;
-            
-            // Process all active keys
-            activeKeys.forEach(key => {
-                switch (key) {
-                    case 'w': case 'ArrowUp': 
-                        left += 100; 
-                        right += 100; 
-                        break;
-                    case 's': case 'ArrowDown': 
-                        left -= 100; 
-                        right -= 100; 
-                        break;
-                    case 'a': case 'ArrowLeft': 
-                        left += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        right -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                 activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        break;
-                    case 'd': case 'ArrowRight': 
-                        left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                 activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        break;
-                }
-            });
-            
-            // Send the command
-            sendMotorCommand(left, right);
+function updateMotorControl() {
+    let left = 0, right = 0;
+    
+    // Process all active keys
+    activeKeys.forEach(key => {
+        switch (key) {
+            case 'w': case 'ArrowUp': 
+                left += leftMotorSpeed; 
+                right += rightMotorSpeed; 
+                break;
+            case 's': case 'ArrowDown': 
+                left -= leftMotorSpeed; 
+                right -= rightMotorSpeed; 
+                break;
+            case 'a': case 'ArrowLeft': 
+                left += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                        activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 
+                        Math.round(leftMotorSpeed * 0.3) : leftMotorSpeed;
+                right -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                         activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 
+                         Math.round(rightMotorSpeed * 0.3) : rightMotorSpeed;
+                break;
+            case 'd': case 'ArrowRight': 
+                left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                        activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 
+                        Math.round(leftMotorSpeed * 0.3) : leftMotorSpeed;
+                right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                         activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 
+                         Math.round(rightMotorSpeed * 0.3) : rightMotorSpeed;
+                break;
         }
+    });
+    
+    // Send the command
+    sendMotorCommand(left, right);
+}
         
         // Button control with better error handling
         function setupButtonControl() {
@@ -667,7 +727,12 @@
                 btn.addEventListener('mouseleave', handleButtonRelease);
             });
         }
-        
+	    
+        function updateSpeedDisplays() {
+ 	    document.getElementById('left-speed-value').textContent = `${leftMotorSpeed}%`;
+	    document.getElementById('right-speed-value').textContent = `${rightMotorSpeed}%`;
+	}
+
         // Connection buttons
         connectBtn.addEventListener('click', connect);
         disconnectBtn.addEventListener('click', disconnect);
@@ -684,6 +749,22 @@
         
         // Initialize button controls
         setupButtonControl();
+	    
+	document.getElementById('left-speed').addEventListener('input', function(e) {
+    leftMotorSpeed = parseInt(e.target.value);
+    updateSpeedDisplays();
+    if (activeKeys.size > 0) {
+        updateMotorControl(); // Update immediately if keys are pressed
+    }
+});
+
+document.getElementById('right-speed').addEventListener('input', function(e) {
+    rightMotorSpeed = parseInt(e.target.value);
+    updateSpeedDisplays();
+    if (activeKeys.size > 0) {
+        updateMotorControl(); // Update immediately if keys are pressed
+    }
+});
     </script>
 </body>
 </html>
