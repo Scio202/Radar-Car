@@ -1,689 +1,681 @@
-
 <!DOCTYPE html>
 <html>
-<head>
-<link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet'>
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-    <title>Radar Car Controller</title>
-    <style>
-        body {
-    		font-family: 'Ubuntu', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        
-        h1 {
-            font-family: 'Ubuntu', sans-serif;
-            text-align: center;
-            color: #2c3e50;
-        }
-        
-        .connection-status {
-            font-family: 'Ubuntu', sans-serif;
-            text-align: center;
-            margin: 10px 0;
-            font-weight: bold;
-        }
-        
-        .connected {
-            font-family: 'Ubuntu', sans-serif;
-            color: #27ae60;
-        }
-        
-        .disconnected {
-            font-family: 'Ubuntu', sans-serif;
-            color: #e74c3c;
-        }
-        
-        #radar-container {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-            position: relative;
-            width: 400px;
-            height: 400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        #radar {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background-color: #ccfccc;
-            background-image: 
-                radial-gradient(circle, transparent 51%, rgba(0, 100, 0, 0.7) 52%, transparent 53%),
-                radial-gradient(circle, transparent 30%, rgba(0, 100, 0, 0.5) 31%, transparent 32%),
-                radial-gradient(circle, transparent 10%, rgba(0, 100, 0, 0.3) 11%, transparent 12%);
-            position: relative;
-            border: 2px solid #2c3e50;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        #radar::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                linear-gradient(0deg, transparent calc(50% - 1px), #7f8c8d calc(50% - 1px), #7f8c8d calc(50% + 1px), transparent calc(50% + 1px)),
-                linear-gradient(90deg, transparent calc(50% - 1px), #7f8c8d calc(50% - 1px), #7f8c8d calc(50% + 1px), transparent calc(50% + 1px));
-            z-index: 0;
-        }
-
-        #radar::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: black;
-            border: 2px solid #808080;
-            z-index: 1;
-        }
-        
-        .radar-arm {
-            position: absolute;
-            width: 50%;
-            height: 2px;
-            background: rgba(231, 76, 60, 0.8);
-            top: 50%;
-            transform-origin: 100% 50%;
-            transition: transform 0.1s linear;
-        }
-        
-        .radar-dot {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: rgba(231, 76, 60, 0.8);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 5px rgba(231, 76, 60, 0.8);
-        }
-        
-        .controls-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-        
-        .connection-buttons {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .btn {
-            font-family: 'Ubuntu', sans-serif;
-            padding: 10px 20px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-connect {
-            background-color: #27ae60;
-            color: white;
-        }
-        
-        .btn-connect:hover {
-            background-color: #2ecc71;
-        }
-        
-        .btn-disconnect {
-            background-color: #e74c3c;
-            color: white;
-        }
-        
-        .btn-disconnect:hover {
-            background-color: #c0392b;
-        }
-        
-        .control-panel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .control-row {
-            display: flex;
-            justify-content: center;
-            margin: 5px 0;
-        }
-        
-        .control-btn {
-            font-family: 'Ubuntu', sans-serif;
-            width: 70px;
-            height: 70px;
-            font-size: 24px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 10px;
-            background-color: #3498db;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .control-btn:hover {
-            background-color: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
-        }
-        
-        .control-btn:active, .key-active {
-            transform: translateY(0) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            background-color: #2c3e50 !important;
-        }
-        
-        .control-btn#forward {
-            background-color: #2ecc71;
-        }
-        
-        .control-btn#forward:hover {
-            background-color: #27ae60;
-        }
-        
-        .control-btn#backward {
-            background-color: #e74c3c;
-        }
-        
-        .control-btn#backward:hover {
-            background-color: #c0392b;
-        }
-        
-        .control-btn#stop {
-            background-color: #f39c12;
-            width: 80px;
-        }
-        
-        .control-btn#stop:hover {
-            background-color: #d35400;
-        }
-        
-        .instructions {
-            font-family: 'Ubuntu', sans-serif;
-            margin-top: 20px;
-            text-align: center;
-            color: #7f8c8d;
-            font-style: italic;
-        }
-        
-        .cardinal-labels {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 2;
-        }
-        
-        .cardinal-label {
-            font-family: 'Ubuntu', sans-serif;
-            position: absolute;
-            font-weight: bold;
-            color: #2c3e50;
-           	background-color: #ccfccc;
-        }
-        
-        .distance-labels {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-        }
-        
-        .distance-label {
-            font-family: 'Ubuntu', sans-serif;
-            position: absolute;
-            font-weight: bold;
-            font-size: 12px;
-            color: #7f8c8d;
-            top: 50%;
-            transform: translateY(-50%);
-			background-color: #ccfccc;
-            padding: 1px 2px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Radar Car Controller</h1>
-    
-    <div class="connection-status disconnected" id="connection-status">Disconnected</div>
-    
-    <div class="connection-buttons">
-        <button class="btn btn-connect" id="connect-btn">Connect</button>
-        <button class="btn btn-disconnect" id="disconnect-btn" disabled>Disconnect</button>
-    </div>
-    
-    <div id="radar-container">
-        <div id="radar">
+   <head>
+      <link href='https://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet'>
+      <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+      <title>Radar Car Controller</title>
+      <style>
+         body {
+         font-family: 'Ubuntu', sans-serif;
+         max-width: 800px;
+         margin: 0 auto;
+         padding: 20px;
+         background-color: #f5f5f5;
+         color: #333;
+         }
+         h1 {
+         font-family: 'Ubuntu', sans-serif;
+         text-align: center;
+         color: #2c3e50;
+         }
+         .connection-status {
+         font-family: 'Ubuntu', sans-serif;
+         text-align: center;
+         margin: 10px 0;
+         font-weight: bold;
+         }
+         .connected {
+         font-family: 'Ubuntu', sans-serif;
+         color: #27ae60;
+         }
+         .disconnected {
+         font-family: 'Ubuntu', sans-serif;
+         color: #e74c3c;
+         }
+         #radar-container {
+         display: flex;
+         justify-content: center;
+         margin: 20px 0;
+         position: relative;
+         width: 400px;
+         height: 400px;
+         margin-left: auto;
+         margin-right: auto;
+         }
+         #radar {
+         width: 100%;
+         height: 100%;
+         border-radius: 50%;
+         background-color: #ccfccc;
+         background-image: 
+         radial-gradient(circle, transparent 51%, rgba(0, 100, 0, 0.7) 52%, transparent 53%),
+         radial-gradient(circle, transparent 30%, rgba(0, 100, 0, 0.5) 31%, transparent 32%),
+         radial-gradient(circle, transparent 10%, rgba(0, 100, 0, 0.3) 11%, transparent 12%);
+         position: relative;
+         border: 2px solid #2c3e50;
+         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+         }
+         #radar::before {
+         content: "";
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: 
+         linear-gradient(0deg, transparent calc(50% - 1px), #7f8c8d calc(50% - 1px), #7f8c8d calc(50% + 1px), transparent calc(50% + 1px)),
+         linear-gradient(90deg, transparent calc(50% - 1px), #7f8c8d calc(50% - 1px), #7f8c8d calc(50% + 1px), transparent calc(50% + 1px));
+         z-index: 0;
+         }
+         #radar::after {
+         content: "";
+         position: absolute;
+         top: 50%;
+         left: 50%;
+         transform: translate(-50%, -50%);
+         width: 8px;
+         height: 8px;
+         border-radius: 50%;
+         background: black;
+         border: 2px solid #808080;
+         z-index: 1;
+         }
+         .radar-arm {
+         position: absolute;
+         width: 50%;
+         height: 2px;
+         background: rgba(231, 76, 60, 0.8);
+         top: 50%;
+         transform-origin: 100% 50%;
+         transform: rotate(0deg);
+         }
+         .radar-dot {
+         position: absolute;
+         width: 8px;
+         height: 8px;
+         background: rgba(231, 76, 60, 0.8);
+         border-radius: 50%;
+         transform: translate(-50%, -50%);
+         box-shadow: 0 0 5px rgba(231, 76, 60, 0.8);
+         }
+         .controls-container {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         margin-top: 20px;
+         }
+         .connection-buttons {
+         margin-bottom: 20px;
+         text-align: center;
+         }
+         .btn {
+         font-family: 'Ubuntu', sans-serif;
+         padding: 10px 20px;
+         margin: 0 5px;
+         border: none;
+         border-radius: 5px;
+         font-size: 16px;
+         cursor: pointer;
+         transition: all 0.2s;
+         }
+         .btn-connect {
+         background-color: #27ae60;
+         color: white;
+         }
+         .btn-connect:hover {
+         background-color: #2ecc71;
+         }
+         .btn-disconnect {
+         background-color: #e74c3c;
+         color: white;
+         }
+         .btn-disconnect:hover {
+         background-color: #c0392b;
+         }
+         .control-panel {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         }
+         .control-row {
+         display: flex;
+         justify-content: center;
+         margin: 5px 0;
+         }
+         .control-btn {
+         font-family: 'Ubuntu', sans-serif;
+         width: 70px;
+         height: 70px;
+         font-size: 24px;
+         margin: 0 5px;
+         border: none;
+         border-radius: 10px;
+         background-color: #3498db;
+         color: white;
+         cursor: pointer;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         transition: all 0.2s;
+         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+         }
+         .control-btn:hover {
+         background-color: #2980b9;
+         transform: translateY(-2px);
+         box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+         }
+         .control-btn:active, .key-active {
+         transform: translateY(0) !important;
+         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+         background-color: #2c3e50 !important;
+         }
+         .control-btn#forward {
+         background-color: #2ecc71;
+         }
+         .control-btn#forward:hover {
+         background-color: #27ae60;
+         }
+         .control-btn#backward {
+         background-color: #e74c3c;
+         }
+         .control-btn#backward:hover {
+         background-color: #c0392b;
+         }
+         .control-btn#stop {
+         background-color: #f39c12;
+         width: 80px;
+         }
+         .control-btn#stop:hover {
+         background-color: #d35400;
+         }
+         .instructions {
+         font-family: 'Ubuntu', sans-serif;
+         margin-top: 20px;
+         text-align: center;
+         color: #7f8c8d;
+         font-style: italic;
+         }
+         .cardinal-labels {
+         position: absolute;
+         width: 100%;
+         height: 100%;
+         top: 0;
+         left: 0;
+         pointer-events: none;
+         z-index: 2;
+         }
+         .cardinal-label {
+         font-family: 'Ubuntu', sans-serif;
+         position: absolute;
+         font-weight: bold;
+         color: #2c3e50;
+         background-color: #ccfccc;
+         }
+         .distance-labels {
+         position: absolute;
+         width: 100%;
+         height: 100%;
+         top: 0;
+         left: 0;
+         pointer-events: none;
+         }
+         .distance-label {
+         font-family: 'Ubuntu', sans-serif;
+         position: absolute;
+         font-weight: bold;
+         font-size: 12px;
+         color: #7f8c8d;
+         top: 50%;
+         transform: translateY(-50%);
+         background-color: #ccfccc;
+         padding: 1px 2px;
+         }
+      </style>
+   </head>
+   <body>
+      <h1>Radar Car Controller</h1>
+      <div class="connection-status disconnected" id="connection-status">Disconnected</div>
+      <div class="connection-buttons">
+         <button class="btn btn-connect" id="connect-btn">Connect</button>
+         <button class="btn btn-disconnect" id="disconnect-btn" disabled>Disconnect</button>
+      </div>
+      <div id="radar-container">
+         <div id="radar">
             <div class="radar-arm" id="arm"></div>
             <div class="cardinal-labels">
-                <div class="cardinal-label" style="top: 10px; left: 50%; transform: translateX(-50%);">N</div>
-                <div class="cardinal-label" style="top: 50%; right: 10px; transform: translateY(-50%);">E</div>
-                <div class="cardinal-label" style="bottom: 10px; left: 50%; transform: translateX(-50%);">S</div>
-                <div class="cardinal-label" style="top: 50%; left: 10px; transform: translateY(-50%);">W</div>
-                <div class="cardinal-label" style="top: 15%; right: 15%;">NE</div>
-                <div class="cardinal-label" style="bottom: 15%; right: 15%;">SE</div>
-                <div class="cardinal-label" style="bottom: 15%; left: 15%;">SW</div>
-                <div class="cardinal-label" style="top: 15%; left: 15%;">NW</div>
+               <div class="cardinal-label" style="top: 10px; left: 50%; transform: translateX(-50%);">N</div>
+               <div class="cardinal-label" style="top: 50%; right: 10px; transform: translateY(-50%);">E</div>
+               <div class="cardinal-label" style="bottom: 10px; left: 50%; transform: translateX(-50%);">S</div>
+               <div class="cardinal-label" style="top: 50%; left: 10px; transform: translateY(-50%);">W</div>
+               <div class="cardinal-label" style="top: 15%; right: 15%;">NE</div>
+               <div class="cardinal-label" style="bottom: 15%; right: 15%;">SE</div>
+               <div class="cardinal-label" style="bottom: 15%; left: 15%;">SW</div>
+               <div class="cardinal-label" style="top: 15%; left: 15%;">NW</div>
             </div>
             <div class="distance-labels">
-                <div class="distance-label" style="left: calc(50% + 33.5px);">100</div>
-                <div class="distance-label" style="left: calc(50% + 90px);">200</div>
-                <div class="distance-label" style="left: calc(50% + 149px);">300</div>
-                <div class="distance-label" style="left: calc(50% + 200px);">400</div>
+               <div class="distance-label" style="left: calc(50% + 33.5px);">100</div>
+               <div class="distance-label" style="left: calc(50% + 90px);">200</div>
+               <div class="distance-label" style="left: calc(50% + 149px);">300</div>
+               <div class="distance-label" style="left: calc(50% + 200px);">400</div>
             </div>
-        </div>
-    </div>
-    
-    <div class="controls-container">
-        <div class="control-panel">
+         </div>
+      </div>
+      <div class="controls-container">
+         <div class="control-panel">
             <div class="control-row">
-                <button class="control-btn" id="forward">↑</button>
-            </div>
-            <div class="control-row">
-                <button class="control-btn" id="left">←</button>
-                <button class="control-btn" id="stop">STOP</button>
-                <button class="control-btn" id="right">→</button>
+               <button class="control-btn" id="forward">↑</button>
             </div>
             <div class="control-row">
-                <button class="control-btn" id="backward">↓</button>
+               <button class="control-btn" id="left">←</button>
+               <button class="control-btn" id="stop">STOP</button>
+               <button class="control-btn" id="right">→</button>
             </div>
-        </div>
-    </div>
-    
-    <div class="instructions">
-        <p>Use WASD or arrow keys to control, or click the buttons above</p>
-        <p>Click "Connect" to establish BLE connection with your Radar Car</p>
-    </div>
-
-    <div id="console" style="
-        font-family: 'Ubuntu', sans-serif;
-        margin: 20px auto;
-        padding: 10px;
-        background-color: #2c3e50;
-        color: white;
-        height: 100px;
-        overflow-y: auto;
-        border-radius: 5px;
-        width: 80%;
-        max-width: 600px;
-    ">
-        <div id="console-content" style="font-size: 12px;"></div>
-    </div>
-
-    <script>
-        // Add this function to log messages to the console
-        function logToConsole(message) {
-            const consoleContent = document.getElementById('console-content');
-            const messageElement = document.createElement('div');
-            messageElement.textContent = message;
-            consoleContent.appendChild(messageElement);
-            consoleContent.scrollTop = consoleContent.scrollHeight;
-        }
-        // BLE UUIDs - Updated to match ESP32 Web BLE App
-        const SERVICE_UUID = "36c5ada5-8eb3-4256-b474-e9f5ae28e93a";
-        const CHAR_UUID_MOTOR = "bfdf57a4-de50-4ca3-af11-4effa090cc11";
-        const CHAR_UUID_DISTANCE = "87a90c14-bb71-4109-9124-abb093d0814f";
-        
-        // DOM elements
-        const radar = document.getElementById('radar');
-        const arm = document.getElementById('arm');
-        const connectBtn = document.getElementById('connect-btn');
-        const disconnectBtn = document.getElementById('disconnect-btn');
-        const statusDisplay = document.getElementById('connection-status');
-        
-        // BLE variables - Updated to match ESP32 Web BLE App
-        let bleServer = null;
-        let bleService = null;
-        let motorCharacteristic = null;
-        let distanceCharacteristic = null;
-        let activeKeys = new Set();
-        let currentAngle = 0;
-        let isConnected = false;
-        let isSendingCommand = false;
-        
-        // Radar dimensions
-        const radarRadius = 200;
-        const maxDistance = 400; // cm
-        
-        // Object to store radar dots by position
-        const radarDots = {};
-        
-        // Check if Web Bluetooth is available - Updated to match ESP32 Web BLE App
-        function isWebBluetoothEnabled() {
-            if (!navigator.bluetooth) {
-                logToConsole("Web Bluetooth API is not available in this browser!");
-                statusDisplay.textContent = "Web Bluetooth API is not available in this browser!";
-                return false;
-            }
-            logToConsole('Web Bluetooth API supported in this browser.');
-            return true;
-        }
-        
-        // Connect to BLE device - Updated to match ESP32 Web BLE App
-        async function connect() {
-            if (!isWebBluetoothEnabled()) return;
-            
-            try {
-                statusDisplay.textContent = "Connecting...";
-                statusDisplay.className = "connection-status";
-                
-                logToConsole('Requesting Bluetooth Device...');
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'RadarCar' }],
-                    optionalServices: [SERVICE_UUID]
-                });
-                
-                logToConsole('Connecting to GATT Server...');
-                device.addEventListener('gattserverdisconnected', onDisconnected);
-                bleServer = await device.gatt.connect();
-                
-                // Get service and characteristics
-                logToConsole('Getting Service...');
-                bleService = await bleServer.getPrimaryService(SERVICE_UUID);
-                
-                // Get motor control characteristic
-                motorCharacteristic = await bleService.getCharacteristic(CHAR_UUID_MOTOR);
-                
-                // Get distance characteristic and enable notifications
-                distanceCharacteristic = await bleService.getCharacteristic(CHAR_UUID_DISTANCE);
-                await distanceCharacteristic.startNotifications();
-                distanceCharacteristic.addEventListener('characteristicvaluechanged', handleDistanceData);
-                
-                // Update UI
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
-                statusDisplay.textContent = "Connected";
-                statusDisplay.className = "connection-status connected";
-                isConnected = true;
-                
-                logToConsole('Connected!');
-            } catch (error) {
-                console.error('Connection failed:', error);
-                statusDisplay.textContent = "Connection failed";
-                statusDisplay.className = "connection-status disconnected";
-                isConnected = false;
-                
-                if (error.message.includes("User cancelled")) {
-                    statusDisplay.textContent = "Connection cancelled";
-                }
-            }
-        }
-        
-        // Handle distance data updates - Updated to match ESP32 Web BLE App format
-        function handleDistanceData(event) {
-            const value = event.target.value;
-            const text = new TextDecoder().decode(value);
-            const [distance, position] = text.split(',').map(Number);
-            updateRadar(distance, position);
-        }
-        
-        // Disconnect from BLE device - Updated to match ESP32 Web BLE App
-        function disconnect() {
-            if (!bleServer) return;
-            
-            logToConsole('Disconnecting...');
-            if (bleServer.connected) {
-                if (distanceCharacteristic) {
-                    distanceCharacteristic.stopNotifications()
-                        .then(() => {
-                            logToConsole('Notifications stopped');
-                            return bleServer.disconnect();
-                        })
-                        .then(() => {
-                            onDisconnected();
-                        });
-                } else {
-                    bleServer.disconnect();
-                    onDisconnected();
-                }
-            } else {
-                onDisconnected();
-            }
-        }
-        
-        // Handle disconnection - Updated to match ESP32 Web BLE App
-        function onDisconnected() {
-            logToConsole('Device disconnected');
-            
-            // Update UI
-            connectBtn.disabled = false;
-            disconnectBtn.disabled = true;
-            statusDisplay.textContent = "Disconnected";
-            statusDisplay.className = "connection-status disconnected";
-            isConnected = false;
-            
-            // Clear BLE variables
-            bleServer = null;
-            bleService = null;
-            motorCharacteristic = null;
-            distanceCharacteristic = null;
-            
-            // Clear all radar dots
-            clearAllRadarDots();
-        }
-        
-        // Clear all radar dots
-        function clearAllRadarDots() {
-            Object.keys(radarDots).forEach(position => {
-                const dot = radarDots[position];
-                if (dot && dot.parentNode) {
-                    dot.parentNode.removeChild(dot);
-                }
-                delete radarDots[position];
-            });
-        }
-        
-        // Update radar display with persistent dots
-        function updateRadar(distance, position) {
-            if (distance > maxDistance) {
-                // If distance is beyond max, remove any existing dot for this position
-                if (radarDots[position]) {
-                    radar.removeChild(radarDots[position]);
-                    delete radarDots[position];
-                }
-                return;
-            }
-            
-            // Calculate angle and position
-            const angle = (position / 64) * 360;
-            const normalizedDistance = (distance / maxDistance) * radarRadius;
-            const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
-            const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
-            
-            // Check if we already have a dot for this position
-            if (radarDots[position]) {
-                // Update existing dot
-                const dot = radarDots[position];
-                dot.style.left = `${x}px`;
-                dot.style.top = `${y}px`;
-            } else {
-                // Create new dot
-                const dot = document.createElement('div');
-                dot.className = 'radar-dot';
-                dot.style.left = `${x}px`;
-                dot.style.top = `${y}px`;
-                radar.appendChild(dot);
-                radarDots[position] = dot;
-            }
-            
-            // Update arm position
-            currentAngle = angle;
-            arm.style.transform = `rotate(${currentAngle}deg)`;
-        }
-        
-        // Send motor control command - Updated to match ESP32 Web BLE App format
-        async function sendMotorCommand(left, right) {
-            if (!motorCharacteristic || !isConnected || isSendingCommand) return;
-            
-            // Clamp values to valid range
-            left = Math.max(-100, Math.min(100, left));
-            right = Math.max(-100, Math.min(100, right));
-            
-            // Convert to unsigned bytes (0-255)
-            const leftByte = left < 0 ? 256 + left : left;
-            const rightByte = right < 0 ? 256 + right : right;
-            
-            try {
-                isSendingCommand = true;
-                const command = new Uint8Array([leftByte, rightByte]);
-                await motorCharacteristic.writeValue(command);
-                logToConsole(`Command sent: Left=${left}, Right=${right}`);
-            } catch (error) {
-                console.error('Error sending command:', error);
-                if (error.message.includes("disconnected")) {
-                    onDisconnected();
-                }
-            } finally {
-                isSendingCommand = false;
-            }
-        }
-        
-        // Get button for keyboard key
-        function getButtonForKey(key) {
-            switch(key) {
-                case 'w': case 'ArrowUp': return document.getElementById('forward');
-                case 's': case 'ArrowDown': return document.getElementById('backward');
-                case 'a': case 'ArrowLeft': return document.getElementById('left');
-                case 'd': case 'ArrowRight': return document.getElementById('right');
-                default: return null;
-            }
-        }
-        
-        // Keyboard control handlers
-        function handleKeyDown(e) {
-            if (!isConnected) return;
-            
-            if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                if (activeKeys.has(e.key)) return;
-                activeKeys.add(e.key);
-                updateMotorControl();
-                
-                // Visual feedback
-                const button = getButtonForKey(e.key);
-                if (button) button.classList.add('key-active');
-                
-                // Prevent default for arrow keys to stop page scrolling
-                if (e.key.startsWith('Arrow')) {
-                    e.preventDefault();
-                }
-            }
-        }
-        
-        function handleKeyUp(e) {
-            if (!isConnected) return;
-            
-            if (activeKeys.has(e.key)) {
-                activeKeys.delete(e.key);
-                updateMotorControl();
-                
-                // Visual feedback
-                const button = getButtonForKey(e.key);
-                if (button) button.classList.remove('key-active');
-            }
-        }
-        
-        // Update motor control based on active keys
-        function updateMotorControl() {
-            let left = 0, right = 0;
-            
-            // Process all active keys
-            activeKeys.forEach(key => {
-                switch (key) {
-                    case 'w': case 'ArrowUp': 
-                        left += 100; 
-                        right += 100; 
-                        break;
-                    case 's': case 'ArrowDown': 
-                        left -= 100; 
-                        right -= 100; 
-                        break;
-                    case 'a': case 'ArrowLeft': 
-                        left += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        right -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+            <div class="control-row">
+               <button class="control-btn" id="backward">↓</button>
+            </div>
+         </div>
+      </div>
+      <div class="instructions">
+         <p>Use WASD or arrow keys to control, or click the buttons above</p>
+         <p>Click "Connect" to establish BLE connection with your Radar Car</p>
+      </div>
+      <div id="console" style="
+         font-family: 'Ubuntu', sans-serif;
+         margin: 20px auto;
+         padding: 10px;
+         background-color: #2c3e50;
+         color: white;
+         height: 100px;
+         overflow-y: auto;
+         border-radius: 5px;
+         width: 80%;
+         max-width: 600px;
+         ">
+         <div id="console-content" style="font-size: 12px;"></div>
+      </div>
+      <script>
+         // Add this function to log messages to the console
+         function logToConsole(message) {
+             const consoleContent = document.getElementById('console-content');
+             const messageElement = document.createElement('div');
+             messageElement.textContent = message;
+             consoleContent.appendChild(messageElement);
+             consoleContent.scrollTop = consoleContent.scrollHeight;
+         }
+         // BLE UUIDs - Updated to match ESP32 Web BLE App
+         const SERVICE_UUID = "36c5ada5-8eb3-4256-b474-e9f5ae28e93a";
+         const CHAR_UUID_MOTOR = "bfdf57a4-de50-4ca3-af11-4effa090cc11";
+         const CHAR_UUID_DISTANCE = "87a90c14-bb71-4109-9124-abb093d0814f";
+         
+         // DOM elements
+         const radar = document.getElementById('radar');
+         const arm = document.getElementById('arm');
+         const connectBtn = document.getElementById('connect-btn');
+         const disconnectBtn = document.getElementById('disconnect-btn');
+         const statusDisplay = document.getElementById('connection-status');
+         
+         // BLE variables - Updated to match ESP32 Web BLE App
+         let bleServer = null;
+         let bleService = null;
+         let motorCharacteristic = null;
+         let distanceCharacteristic = null;
+         let activeKeys = new Set();
+         let currentAngle = 0;
+         let isConnected = false;
+         let isSendingCommand = false;
+         let animationId = null;
+         
+         // Radar dimensions
+         const radarRadius = 200;
+         const maxDistance = 400; // cm
+         
+         // Object to store radar dots by position
+         const radarDots = {};
+         
+         // Initialize radar arm to face north (0 degrees)
+         arm.style.transform = 'rotate(0deg)';
+         
+         // Start continuous radar arm rotation
+         function startRadarAnimation() {
+             let lastTimestamp = 0;
+             const rotationSpeed = 0.1; // degrees per millisecond
+             
+             function animate(timestamp) {
+                 if (!lastTimestamp) lastTimestamp = timestamp;
+                 const deltaTime = timestamp - lastTimestamp;
+                 lastTimestamp = timestamp;
+                 
+                 currentAngle = (currentAngle + rotationSpeed * deltaTime) % 360;
+                 arm.style.transform = `rotate(${currentAngle}deg)`;
+                 
+                 animationId = requestAnimationFrame(animate);
+             }
+             
+             animationId = requestAnimationFrame(animate);
+         }
+         
+         // Stop radar animation
+         function stopRadarAnimation() {
+             if (animationId) {
+                 cancelAnimationFrame(animationId);
+                 animationId = null;
+             }
+         }
+         
+         // Check if Web Bluetooth is available - Updated to match ESP32 Web BLE App
+         function isWebBluetoothEnabled() {
+             if (!navigator.bluetooth) {
+                 logToConsole("Web Bluetooth API is not available in this browser!");
+                 statusDisplay.textContent = "Web Bluetooth API is not available in this browser!";
+                 return false;
+             }
+             logToConsole('Web Bluetooth API supported in this browser.');
+             return true;
+         }
+         
+         // Connect to BLE device - Updated to match ESP32 Web BLE App
+         async function connect() {
+             if (!isWebBluetoothEnabled()) return;
+             
+             try {
+                 statusDisplay.textContent = "Connecting...";
+                 statusDisplay.className = "connection-status";
+                 
+                 logToConsole('Requesting Bluetooth Device...');
+                 const device = await navigator.bluetooth.requestDevice({
+                     filters: [{ name: 'RadarCar' }],
+                     optionalServices: [SERVICE_UUID]
+                 });
+                 
+                 logToConsole('Connecting to GATT Server...');
+                 device.addEventListener('gattserverdisconnected', onDisconnected);
+                 bleServer = await device.gatt.connect();
+                 
+                 // Get service and characteristics
+                 logToConsole('Getting Service...');
+                 bleService = await bleServer.getPrimaryService(SERVICE_UUID);
+                 
+                 // Get motor control characteristic
+                 motorCharacteristic = await bleService.getCharacteristic(CHAR_UUID_MOTOR);
+                 
+                 // Get distance characteristic and enable notifications
+                 distanceCharacteristic = await bleService.getCharacteristic(CHAR_UUID_DISTANCE);
+                 await distanceCharacteristic.startNotifications();
+                 distanceCharacteristic.addEventListener('characteristicvaluechanged', handleDistanceData);
+                 
+                 // Update UI
+                 connectBtn.disabled = true;
+                 disconnectBtn.disabled = false;
+                 statusDisplay.textContent = "Connected";
+                 statusDisplay.className = "connection-status connected";
+                 isConnected = true;
+                 
+                 // Start radar animation
+                 startRadarAnimation();
+                 
+                 logToConsole('Connected!');
+             } catch (error) {
+                 console.error('Connection failed:', error);
+                 statusDisplay.textContent = "Connection failed";
+                 statusDisplay.className = "connection-status disconnected";
+                 isConnected = false;
+                 
+                 if (error.message.includes("User cancelled")) {
+                     statusDisplay.textContent = "Connection cancelled";
+                 }
+             }
+         }
+         
+         // Handle distance data updates - Updated to match ESP32 Web BLE App format
+         function handleDistanceData(event) {
+             const value = event.target.value;
+             const text = new TextDecoder().decode(value);
+             const [distance, position] = text.split(',').map(Number);
+             updateRadar(distance, position);
+         }
+         
+         // Disconnect from BLE device - Updated to match ESP32 Web BLE App
+         function disconnect() {
+             if (!bleServer) return;
+             
+             logToConsole('Disconnecting...');
+             if (bleServer.connected) {
+                 if (distanceCharacteristic) {
+                     distanceCharacteristic.stopNotifications()
+                         .then(() => {
+                             logToConsole('Notifications stopped');
+                             return bleServer.disconnect();
+                         })
+                         .then(() => {
+                             onDisconnected();
+                         });
+                 } else {
+                     bleServer.disconnect();
+                     onDisconnected();
+                 }
+             } else {
+                 onDisconnected();
+             }
+         }
+         
+         // Handle disconnection - Updated to match ESP32 Web BLE App
+         function onDisconnected() {
+             logToConsole('Device disconnected');
+             
+             // Update UI
+             connectBtn.disabled = false;
+             disconnectBtn.disabled = true;
+             statusDisplay.textContent = "Disconnected";
+             statusDisplay.className = "connection-status disconnected";
+             isConnected = false;
+             
+             // Stop radar animation
+             stopRadarAnimation();
+             
+             // Clear BLE variables
+             bleServer = null;
+             bleService = null;
+             motorCharacteristic = null;
+             distanceCharacteristic = null;
+             
+             // Clear all radar dots
+             clearAllRadarDots();
+         }
+         
+         // Clear all radar dots
+         function clearAllRadarDots() {
+             Object.keys(radarDots).forEach(position => {
+                 const dot = radarDots[position];
+                 if (dot && dot.parentNode) {
+                     dot.parentNode.removeChild(dot);
+                 }
+                 delete radarDots[position];
+             });
+         }
+         
+         // Update radar display with persistent dots
+         function updateRadar(distance, position) {
+             if (distance > maxDistance) {
+                 // If distance is beyond max, remove any existing dot for this position
+                 if (radarDots[position]) {
+                     radar.removeChild(radarDots[position]);
+                     delete radarDots[position];
+                 }
+                 return;
+             }
+             
+             // Calculate angle and position
+             const angle = (position / 64) * 360;
+             const normalizedDistance = (distance / maxDistance) * radarRadius;
+             const x = radarRadius + Math.cos((angle - 90) * Math.PI / 180) * normalizedDistance;
+             const y = radarRadius + Math.sin((angle - 90) * Math.PI / 180) * normalizedDistance;
+             
+             // Check if we already have a dot for this position
+             if (radarDots[position]) {
+                 // Update existing dot
+                 const dot = radarDots[position];
+                 dot.style.left = `${x}px`;
+                 dot.style.top = `${y}px`;
+             } else {
+                 // Create new dot
+                 const dot = document.createElement('div');
+                 dot.className = 'radar-dot';
+                 dot.style.left = `${x}px`;
+                 dot.style.top = `${y}px`;
+                 radar.appendChild(dot);
+                 radarDots[position] = dot;
+             }
+         }
+         
+         // Send motor control command - Updated to match ESP32 Web BLE App format
+         async function sendMotorCommand(left, right) {
+             if (!motorCharacteristic || !isConnected || isSendingCommand) return;
+             
+             // Clamp values to valid range
+             left = Math.max(-100, Math.min(100, left));
+             right = Math.max(-100, Math.min(100, right));
+             
+             // Convert to unsigned bytes (0-255)
+             const leftByte = left < 0 ? 256 + left : left;
+             const rightByte = right < 0 ? 256 + right : right;
+             
+             try {
+                 isSendingCommand = true;
+                 const command = new Uint8Array([leftByte, rightByte]);
+                 await motorCharacteristic.writeValue(command);
+                 logToConsole(`Command sent: Left=${left}, Right=${right}`);
+             } catch (error) {
+                 console.error('Error sending command:', error);
+                 if (error.message.includes("disconnected")) {
+                     onDisconnected();
+                 }
+             } finally {
+                 isSendingCommand = false;
+             }
+         }
+         
+         // Get button for keyboard key
+         function getButtonForKey(key) {
+             switch(key) {
+                 case 'w': case 'ArrowUp': return document.getElementById('forward');
+                 case 's': case 'ArrowDown': return document.getElementById('backward');
+                 case 'a': case 'ArrowLeft': return document.getElementById('left');
+                 case 'd': case 'ArrowRight': return document.getElementById('right');
+                 default: return null;
+             }
+         }
+         
+         // Keyboard control handlers
+         function handleKeyDown(e) {
+             if (!isConnected) return;
+             
+             if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                 if (activeKeys.has(e.key)) return;
+                 activeKeys.add(e.key);
+                 updateMotorControl();
+                 
+                 // Visual feedback
+                 const button = getButtonForKey(e.key);
+                 if (button) button.classList.add('key-active');
+                 
+                 // Prevent default for arrow keys to stop page scrolling
+                 if (e.key.startsWith('Arrow')) {
+                     e.preventDefault();
+                 }
+             }
+         }
+         
+         function handleKeyUp(e) {
+             if (!isConnected) return;
+             
+             if (activeKeys.has(e.key)) {
+                 activeKeys.delete(e.key);
+                 updateMotorControl();
+                 
+                 // Visual feedback
+                 const button = getButtonForKey(e.key);
+                 if (button) button.classList.remove('key-active');
+             }
+         }
+         
+         // Update motor control based on active keys
+         function updateMotorControl() {
+             let left = 0, right = 0;
+             
+             // Process all active keys
+             activeKeys.forEach(key => {
+                 switch (key) {
+                     case 'w': case 'ArrowUp': 
+                         left += 100; 
+                         right += 100; 
+                         break;
+                     case 's': case 'ArrowDown': 
+                         left -= 100; 
+                         right -= 100; 
+                         break;
+                     case 'a': case 'ArrowLeft': 
+                         left += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
                                  activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        break;
-                    case 'd': case 'ArrowRight': 
-                        left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
-                                activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                         right -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                                  activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
+                         break;
+                     case 'd': case 'ArrowRight': 
+                         left -= (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
                                  activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
-                        break;
-                }
-            });
-            
-            // Send the command
-            sendMotorCommand(left, right);
-        }
-        
-        // Button control with better error handling
-        function setupButtonControl() {
-            const forwardBtn = document.getElementById('forward');
-            const backwardBtn = document.getElementById('backward');
-            const leftBtn = document.getElementById('right');
-            const rightBtn = document.getElementById('left');
-            const stopBtn = document.getElementById('stop');
-            
-            // Button press handlers
-            forwardBtn.addEventListener('mousedown', () => sendMotorCommand(100, 100));
-            backwardBtn.addEventListener('mousedown', () => sendMotorCommand(-100, -100));
-            leftBtn.addEventListener('mousedown', () => sendMotorCommand(-100, 100));
-            rightBtn.addEventListener('mousedown', () => sendMotorCommand(100, -100));
-            stopBtn.addEventListener('mousedown', () => sendMotorCommand(0, 0));
-            
-            // Button release handlers
-            const handleButtonRelease = () => {
-                if (activeKeys.size === 0) {
-                    sendMotorCommand(0, 0);
-                }
-            };
-            
-            [forwardBtn, backwardBtn, leftBtn, rightBtn, stopBtn].forEach(btn => {
-                btn.addEventListener('mouseup', handleButtonRelease);
-                btn.addEventListener('mouseleave', handleButtonRelease);
-            });
-        }
-        
-        // Connection buttons
-        connectBtn.addEventListener('click', connect);
-        disconnectBtn.addEventListener('click', disconnect);
-        
-        // Keyboard event listeners
-        document.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('keyup', handleKeyUp);
-        
-        // Initial Web Bluetooth check
-        if (!navigator.bluetooth) {
-            alert("Web Bluetooth is not supported in your browser. Please use Chrome or Edge.");
-            connectBtn.disabled = true;
-        }
-        
-        // Initialize button controls
-        setupButtonControl();
-    </script>
-</body>
+                         right += (activeKeys.has('w') || activeKeys.has('ArrowUp') || 
+                                  activeKeys.has('s') || activeKeys.has('ArrowDown')) ? 30 : 100;
+                         break;
+                 }
+             });
+             
+             // Send the command
+             sendMotorCommand(left, right);
+         }
+         
+         // Button control with better error handling
+         function setupButtonControl() {
+             const forwardBtn = document.getElementById('forward');
+             const backwardBtn = document.getElementById('backward');
+             const leftBtn = document.getElementById('right');
+             const rightBtn = document.getElementById('left');
+             const stopBtn = document.getElementById('stop');
+             
+             // Button press handlers
+             forwardBtn.addEventListener('mousedown', () => sendMotorCommand(100, 100));
+             backwardBtn.addEventListener('mousedown', () => sendMotorCommand(-100, -100));
+             leftBtn.addEventListener('mousedown', () => sendMotorCommand(-100, 100));
+             rightBtn.addEventListener('mousedown', () => sendMotorCommand(100, -100));
+             stopBtn.addEventListener('mousedown', () => sendMotorCommand(0, 0));
+             
+             // Button release handlers
+             const handleButtonRelease = () => {
+                 if (activeKeys.size === 0) {
+                     sendMotorCommand(0, 0);
+                 }
+             };
+             
+             [forwardBtn, backwardBtn, leftBtn, rightBtn, stopBtn].forEach(btn => {
+                 btn.addEventListener('mouseup', handleButtonRelease);
+                 btn.addEventListener('mouseleave', handleButtonRelease);
+             });
+         }
+         
+         // Connection buttons
+         connectBtn.addEventListener('click', connect);
+         disconnectBtn.addEventListener('click', disconnect);
+         
+         // Keyboard event listeners
+         document.addEventListener('keydown', handleKeyDown);
+         document.addEventListener('keyup', handleKeyUp);
+         
+         // Initial Web Bluetooth check
+         if (!navigator.bluetooth) {
+             alert("Web Bluetooth is not supported in your browser. Please use Chrome or Edge.");
+             connectBtn.disabled = true;
+         }
+         
+         // Initialize button controls
+         setupButtonControl();
+      </script>
+   </body>
 </html>
